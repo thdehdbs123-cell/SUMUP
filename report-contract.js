@@ -16,16 +16,16 @@ export const REPORT_SCHEMA = object({
   title:string, summary:string,
   keywords:{type:'array',items:string,minItems:3,maxItems:6},
   assets:{type:'array',items:string,minItems:1,maxItems:4},
-  directions:{type:'array',minItems:3,maxItems:3,items:object({title:string,reason:string,firstStep:string,source:{type:'integer',enum:[0,1,2]},quote:string})},
-  experiment:object({action:string,timebox:string,reflection:string})
+  directions:{type:'array',minItems:3,maxItems:3,items:object({title:string,reason:string,contribution:string,feasibility:string,source:{type:'integer',enum:[0,1,2]},quote:string})},
+  outlook:object({scene:string,value:string})
 });
 const text = (v,max=1500) => typeof v==='string' && v.trim().length>0 && v.length<=max;
 export function validateReport(report, reflections) {
   if (!report || typeof report!=='object' || !text(report.title,120) || !text(report.summary) ||
       !Array.isArray(report.keywords) || report.keywords.length<3 || report.keywords.length>6 || !report.keywords.every(v=>text(v,80)) ||
       !Array.isArray(report.assets) || report.assets.length<1 || report.assets.length>4 || !report.assets.every(v=>text(v)) ||
-      !Array.isArray(report.directions) || report.directions.length!==3 || !report.experiment) return false;
-  return report.directions.every(d=> d && text(d.title,120) && text(d.reason) && text(d.firstStep) &&
+      !Array.isArray(report.directions) || report.directions.length!==3 || !report.outlook) return false;
+  return report.directions.every(d=> d && text(d.title,120) && text(d.reason) && text(d.contribution) && text(d.feasibility) &&
     Number.isInteger(d.source) && d.source>=0 && d.source<3 && text(d.quote,180) && reflections[d.source].includes(d.quote)) &&
-    ['action','timebox','reflection'].every(key=>text(report.experiment[key]));
+    ['scene','value'].every(key=>text(report.outlook[key]));
 }
