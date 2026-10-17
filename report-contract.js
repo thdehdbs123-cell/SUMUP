@@ -1,31 +1,45 @@
+import { TYPES } from './classification.js';
 export const REFLECTION_QUESTIONS = [
-  {title:'요즘 자꾸 끌리는 세계가 있나요?', placeholder:'예: 독립서점, 여행, 인테리어, 작은 브랜드… 무엇이 좋은지도 들려주세요.'},
-  {title:'이상하게 계속 눈에 들어오는 소재가 있나요?', placeholder:'예: 공간의 색감, 사람들의 관계, 오래된 물건… 반복해서 눈길이 가는 것을 적어주세요.'},
-  {title:'최근 몇 년간 시간·돈·경험이 가장 많이 쌓인 주제는 무엇인가요?', placeholder:'일, 공부, 취미 모두 좋아요. 어떤 경험을 얼마나 해왔는지 편하게 적어주세요.'}
+  {title:'요즘 어떤 분야나 커뮤니티에 끌리나요?', hint:'큰 관심 분야를 들려주세요. 예: 다이빙, 버튜버, 독립출판', placeholder:'예: 요즘 다이빙을 즐기는 사람들의 이야기에 끌려요.', chips:['다이빙 분야','버튜버 커뮤니티','독립출판 분야','인테리어 분야']},
+  {title:'그 안에서 유독 눈에 들어오는 것은 뭔가요?', hint:'구체적인 물건·장면·소재를 떠올려보세요. 예: 오래된 장비, 수중 사진의 색감', placeholder:'예: 오래된 다이빙 장비와 수중 사진의 푸른 색감이 좋아요.', chips:['오래된 장비','수중 사진의 색감','캐릭터의 목소리','책 표지의 질감']},
+  {title:'어떤 주제에 시간·돈·경험이 많이 쌓였나요?', hint:'직접 해본 일을 짧게 적어주세요. 횟수나 기간도 기억나는 만큼이면 좋아요.', placeholder:'예: 다이빙 40회, 중고 장비 거래, 리뷰·협찬 경험이 있어요.', chips:[]}
 ];
+export const INVESTMENT_KINDS = {time:'시간',money:'돈',experience:'경험'};
 export const MIN_REFLECTION_LENGTH = 5;
-export const MAX_REFLECTION_LENGTH = 1500;
+export const MAX_REFLECTION_LENGTH = 200;
+export function validReflection(value){return typeof value==='string' && value.trim().length>=MIN_REFLECTION_LENGTH && value.length<=MAX_REFLECTION_LENGTH;}
 export function validateReflections(values) {
-  return Array.isArray(values) && values.length === 3 && REFLECTION_QUESTIONS.every((_, i) =>
-    typeof values[i] === 'string' && values[i].trim().length >= MIN_REFLECTION_LENGTH && values[i].length <= MAX_REFLECTION_LENGTH);
+  return Array.isArray(values) && values.length===3 && REFLECTION_QUESTIONS.every((_,i)=>typeof values[i]==='string' && values[i].length<=MAX_REFLECTION_LENGTH &&
+    (values[i].trim()==='' || validReflection(values[i]))) && values.filter(validReflection).length>=2;
 }
-
-const string = {type:'string'};
-const object = properties => ({type:'object',properties,required:Object.keys(properties),additionalProperties:false});
-export const REPORT_SCHEMA = object({
-  title:string, summary:string,
+export function normalizeInvestment(value){
+  if(value===undefined || value===null)return {kind:null,amount:''};
+  if(typeof value!=='object'||Array.isArray(value)||
+    !(value.kind===null || Object.hasOwn(INVESTMENT_KINDS,value.kind)) ||
+    typeof value.amount!=='string'||value.amount.length>80)throw new TypeError('쌓아온 경험의 종류와 양을 확인해주세요.');
+  return {kind:value.kind,amount:value.amount.trim()};
+}
+const string={type:'string'};
+const object=properties=>({type:'object',properties,required:Object.keys(properties),additionalProperties:false});
+const evidence=object({source:{type:'integer',enum:[0,1,2]},quote:string});
+export const REPORT_SCHEMA=object({
+  title:string,summary:string,
   keywords:{type:'array',items:string,minItems:3,maxItems:6},
-  assets:{type:'array',items:string,minItems:1,maxItems:4},
-  directions:{type:'array',minItems:3,maxItems:3,items:object({title:string,reason:string,contribution:string,feasibility:string,source:{type:'integer',enum:[0,1,2]},quote:string})},
+  assets:{type:'array',minItems:0,maxItems:4,items:object({description:string,source:{type:'integer',enum:[0,1,2]},quote:string})},
+  directions:{type:'array',minItems:3,maxItems:3,items:object({title:string,reason:string,contribution:string,feasibility:string,
+    trait:{type:'string',enum:Object.keys(TYPES)},evidence:{type:'array',minItems:2,maxItems:3,items:evidence}})},
   outlook:object({scene:string,value:string})
 });
-const text = (v,max=1500) => typeof v==='string' && v.trim().length>0 && v.length<=max;
-export function validateReport(report, reflections) {
-  if (!report || typeof report!=='object' || !text(report.title,120) || !text(report.summary) ||
-      !Array.isArray(report.keywords) || report.keywords.length<3 || report.keywords.length>6 || !report.keywords.every(v=>text(v,80)) ||
-      !Array.isArray(report.assets) || report.assets.length<1 || report.assets.length>4 || !report.assets.every(v=>text(v)) ||
-      !Array.isArray(report.directions) || report.directions.length!==3 || !report.outlook) return false;
-  return report.directions.every(d=> d && text(d.title,120) && text(d.reason) && text(d.contribution) && text(d.feasibility) &&
-    Number.isInteger(d.source) && d.source>=0 && d.source<3 && text(d.quote,180) && reflections[d.source].includes(d.quote)) &&
+const text=(value,max=1500)=>typeof value==='string'&&value.trim().length>0&&value.length<=max;
+const validEvidence=(entry,reflections)=>entry&&Number.isInteger(entry.source)&&entry.source>=0&&entry.source<3&&
+  text(entry.quote,60)&&typeof reflections[entry.source]==='string'&&reflections[entry.source].trim()!==''&&reflections[entry.source].includes(entry.quote);
+export function validateReport(report,reflections,allowedTraits=Object.keys(TYPES)) {
+  if(!report||typeof report!=='object'||!text(report.title,120)||!text(report.summary)||
+    !Array.isArray(report.keywords)||report.keywords.length<3||report.keywords.length>6||!report.keywords.every(v=>text(v,80))||
+    !Array.isArray(report.assets)||report.assets.length>4||!report.assets.every(asset=>asset&&text(asset.description,500)&&validEvidence(asset,reflections))||
+    !Array.isArray(report.directions)||report.directions.length!==3||!report.outlook)return false;
+  return report.directions.every(d=>d&&text(d.title,120)&&text(d.reason)&&text(d.contribution)&&text(d.feasibility)&&allowedTraits.includes(d.trait)&&
+    Array.isArray(d.evidence)&&d.evidence.length>=2&&d.evidence.length<=3&&d.evidence.every(e=>validEvidence(e,reflections))&&
+    new Set(d.evidence.map(e=>e.source)).size===d.evidence.length)&&
     ['scene','value'].every(key=>text(report.outlook[key]));
 }
