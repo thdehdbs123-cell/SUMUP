@@ -18,6 +18,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci --no-audit --no-fund
+      - run: npm test
       - run: npm run build -- --base=/SUMUP/
       - name: Publish deployment branch
         run: |
