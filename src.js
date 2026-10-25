@@ -95,7 +95,7 @@ async function generateReport(){
    const response=await fetch('/api/report',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({answers:[...answers],reflections:reflections.map(value=>value.trim()),investment}),signal:controller.signal});
    let data;try{data=await response.json()}catch{throw new Error('AI 서버 응답을 읽지 못했어요. 다시 시도해주세요.')}
    if(!response.ok)throw new Error(data.error||'리포트를 만들지 못했어요. 다시 시도해주세요.');
-   if(!validateReport(data.report,reflections.map(value=>value.trim()),[profile().primary,profile().secondary]))throw new Error('리포트 형식을 확인하지 못했어요. 다시 시도해주세요.');
+   if(!validateReport(data.report,reflections.map(value=>value.trim()),[profile().primary,profile().secondary],investment))throw new Error('리포트 형식을 확인하지 못했어요. 다시 시도해주세요.');
    if(reportController!==controller)return;
    report=data.report;basicExpanded=false;reportStatus='success';step=8;render();window.scrollTo(0,0);
  }catch(error){

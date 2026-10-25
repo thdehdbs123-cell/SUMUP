@@ -31,15 +31,49 @@ export const REPORT_SCHEMA=object({
   outlook:object({scene:string,value:string})
 });
 const text=(value,max=1500)=>typeof value==='string'&&value.trim().length>0&&value.length<=max;
-const validEvidence=(entry,reflections)=>entry&&Number.isInteger(entry.source)&&entry.source>=0&&entry.source<3&&
-  text(entry.quote,60)&&typeof reflections[entry.source]==='string'&&reflections[entry.source].trim()!==''&&reflections[entry.source].includes(entry.quote);
-export function validateReport(report,reflections,allowedTraits=Object.keys(TYPES)) {
+export function evidenceTexts(reflections,investment){
+  return reflections.map((answer,source)=>[
+    ...(typeof answer==='string'&&answer.trim()?[answer]:[]),
+    ...(source===2&&typeof answer==='string'&&answer.trim()&&typeof investment?.amount==='string'&&investment.amount.trim()?[investment.amount.trim()]:[])
+  ]);
+}
+export function evidenceCatalog(reflections,investment){
+  return evidenceTexts(reflections,investment).flatMap((values,source)=>{
+    const quotes=new Set();
+    for(const value of values){
+      if(value.trim().length<=60)quotes.add(value.trim());
+      for(const part of value.split(/[.!?。！？\n,]+/u)){
+        const phrase=part.trim();
+        if(phrase&&phrase.length<=60)quotes.add(phrase);
+        else for(const chunk of (phrase.match(/.{1,30}/gu)||[]))if(chunk.trim())quotes.add(chunk.trim());
+      }
+    }
+    return [...quotes].map(quote=>({source,quote}));
+  });
+}
+// The provider chooses exact quotes from actual inputs instead of rewriting them.
+export function groundedReportSchema(reflections,investment,allowedTraits){
+  const schema=structuredClone(REPORT_SCHEMA);
+  const catalog=evidenceCatalog(reflections,investment);
+  const branches=withDescription=>[0,1,2].flatMap(source=>{
+    const quotes=catalog.filter(item=>item.source===source).map(item=>item.quote);
+    return quotes.length?[object({...(withDescription?{description:string}:{}),source:{type:'integer',enum:[source]},quote:{type:'string',enum:quotes}})]:[];
+  });
+  schema.properties.assets.items={anyOf:branches(true)};
+  const direction=schema.properties.directions.items.properties;
+  direction.evidence.items={anyOf:branches(false)};
+  direction.trait.enum=allowedTraits;
+  return schema;
+}
+const validEvidence=(entry,reflections,investment)=>entry&&Number.isInteger(entry.source)&&entry.source>=0&&entry.source<3&&
+  text(entry.quote,60)&&evidenceTexts(reflections,investment)[entry.source].some(value=>value.includes(entry.quote));
+export function validateReport(report,reflections,allowedTraits=Object.keys(TYPES),investment) {
   if(!report||typeof report!=='object'||!text(report.title,120)||!text(report.summary)||
     !Array.isArray(report.keywords)||report.keywords.length<3||report.keywords.length>6||!report.keywords.every(v=>text(v,80))||
-    !Array.isArray(report.assets)||report.assets.length>4||!report.assets.every(asset=>asset&&text(asset.description,500)&&validEvidence(asset,reflections))||
+    !Array.isArray(report.assets)||report.assets.length>4||!report.assets.every(asset=>asset&&text(asset.description,500)&&validEvidence(asset,reflections,investment))||
     !Array.isArray(report.directions)||report.directions.length!==3||!report.outlook)return false;
   return report.directions.every(d=>d&&text(d.title,120)&&text(d.reason)&&text(d.contribution)&&text(d.feasibility)&&allowedTraits.includes(d.trait)&&
-    Array.isArray(d.evidence)&&d.evidence.length>=2&&d.evidence.length<=3&&d.evidence.every(e=>validEvidence(e,reflections))&&
+    Array.isArray(d.evidence)&&d.evidence.length>=2&&d.evidence.length<=3&&d.evidence.every(e=>validEvidence(e,reflections,investment))&&
     new Set(d.evidence.map(e=>e.source)).size===d.evidence.length)&&
     ['scene','value'].every(key=>text(report.outlook[key]));
 }

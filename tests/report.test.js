@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Readable } from 'node:stream';
 import { createReportHandler } from '../api/report.js';
-import { validateReport, validateReflections, normalizeInvestment } from '../report-contract.js';
+import { validateReport, validateReflections, normalizeInvestment, evidenceCatalog, groundedReportSchema } from '../report-contract.js';
 import { reportView, reflectionPage } from '../report-ui.js';
 
 import { reflections, answers, report } from './fixtures/report.js';
@@ -55,7 +55,7 @@ test('missing credentials, provider errors and timeouts have safe actionable err
 test('fabricated evidence, invalid JSON and incomplete output are rejected',async()=>{
  const bad=structuredClone(report);bad.directions[0].evidence[0].quote='사용자가 말하지 않은 경력';assert.equal(validateReport(bad,reflections),false);
  for(const response of [success(bad),new Response(JSON.stringify({status:'incomplete',output:[]})),new Response(JSON.stringify({status:'completed',output:[{content:[{type:'output_text',text:'not json'}]}]}))]){
-  const result=await invoke(createReportHandler({environment:env,request:async()=>response}));assert.equal(result.statusCode,502);
+  const result=await invoke(createReportHandler({environment:env,request:async()=>response.clone()}));assert.equal(result.statusCode,502);
  }
 });
 
@@ -123,4 +123,55 @@ test('investment kind and quantity are validated and transmitted without becomin
  const result=await invoke(handler,{...payload,investment:{kind:'experience',amount:' 40회 '}});
  assert.equal(result.statusCode,200);assert.deepEqual(investment,{kind:'experience',kindLabel:'경험',amount:'40회'});
  const invalid=await invoke(handler,{...payload,investment:{kind:'bad',amount:'40회'}});assert.equal(invalid.statusCode,400);
+});
+
+test('quantity field is valid original evidence for question 3, including short topic-only answers',async()=>{
+ const short=[reflections[0],reflections[1],'빈티지, 여행'];
+ const investment={kind:'experience',amount:'3년간 옷장 꽉, 여행 7번'};
+ const amountReport=structuredClone(report);
+ amountReport.assets=[{description:'여행을 7번 다녀온 경험',source:2,quote:'여행 7번'}];
+ amountReport.directions[1].evidence[1]={source:2,quote:'여행 7번'};
+ amountReport.directions[2].evidence[1]={source:2,quote:'빈티지'};
+ assert.equal(validateReport(amountReport,short,['explorer','curator']),false);
+ assert.equal(validateReport(amountReport,short,['explorer','curator'],investment),true);
+ const handler=createReportHandler({environment:env,request:async(_url,options)=>{
+  const input=JSON.parse(options.body);const context=JSON.parse(input.input[1].content);
+  assert.ok(context.evidenceCatalog.some(item=>item.source===2&&item.quote==='여행 7번'));
+  const direction=input.text.format.schema.properties.directions.items.properties;
+  assert.deepEqual(direction.trait.enum,['explorer','curator']);
+  const third=direction.evidence.items.anyOf.find(branch=>branch.properties.source.enum[0]===2);
+  assert.ok(third.properties.quote.enum.includes('빈티지, 여행'));
+  assert.ok(third.properties.quote.enum.includes('여행 7번'));
+  return success(amountReport);
+ }});
+ const result=await invoke(handler,{...payload,reflections:short,investment});assert.equal(result.statusCode,200);
+ const fabricated=structuredClone(amountReport);fabricated.assets[0].quote='여행 70번';
+ assert.equal(validateReport(fabricated,short,['explorer','curator'],investment),false);
+ assert.equal(validateReport(amountReport,[short[0],short[1],''],['explorer','curator'],investment),false);
+});
+
+test('quote candidates preserve exact source text and never include skipped quantities',()=>{
+ const values=['짧은 관심사',reflections[1],Array(30).fill('긴 경험 🐠').join(' ')];
+ const catalog=evidenceCatalog(values,{kind:'experience',amount:'여행 7번'});
+ assert.ok(catalog.some(item=>item.quote==='짧은 관심사'));
+ for(const item of catalog){assert.ok(item.quote.length<=60);assert.ok(values[item.source].includes(item.quote)||(item.source===2&&'여행 7번'.includes(item.quote)));}
+ const skipped=evidenceCatalog([values[0],values[1],''],{kind:'experience',amount:'여행 7번'});
+ assert.equal(skipped.some(item=>item.source===2),false);
+ const schema=groundedReportSchema([values[0],values[1],''],{},['maker','analyst']);
+ assert.equal(schema.properties.directions.items.properties.evidence.items.anyOf.length,2);
+});
+
+test('invalid model evidence receives one bounded repair while persistent fabrication is rejected',async()=>{
+ const bad=structuredClone(report);bad.directions[0].evidence[0].quote='없는 경력';
+ let calls=0,firstSignal;
+ const handler=createReportHandler({environment:env,request:async(_url,options)=>{
+  calls++;const input=JSON.parse(options.body);
+  if(calls===1){firstSignal=options.signal;return success(bad)}
+  assert.equal(options.signal,firstSignal);assert.equal(input.input.length,4);
+  return success(report);
+ }});
+ const repaired=await invoke(handler);assert.equal(repaired.statusCode,200);assert.equal(calls,2);assert.deepEqual(repaired.body,{report});
+ let failedCalls=0;
+ const failing=createReportHandler({environment:env,request:async()=>{failedCalls++;return success(bad)}});
+ const failed=await invoke(failing);assert.equal(failed.statusCode,502);assert.equal(failed.body.code,'AI_INVALID_REPORT');assert.equal(failedCalls,2);
 });

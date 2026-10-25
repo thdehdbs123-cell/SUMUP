@@ -75,3 +75,14 @@ test('cancelled generation cannot replace the basic result with a late response'
  submit();click('[data-skip-report]');resolve(new Response(JSON.stringify({report})));await settle();
  assert.equal(d.querySelector('.ai-report'),null);assert.ok(d.querySelector('.report-invite'));
 });
+
+test('browser accepts verified evidence quoted from the separate quantity field',async t=>{
+ const amountReport=structuredClone(report);
+ amountReport.assets=[{description:'여행 7번의 경험',source:2,quote:'여행 7번'}];
+ amountReport.directions[1].evidence[1]={source:2,quote:'여행 7번'};
+ amountReport.directions[2].evidence[1]={source:2,quote:'빈티지'};
+ const {d,click,input,submit}=mount(t,async()=>new Response(JSON.stringify({report:amountReport})));
+ input('textarea',reflections[0]);submit();input('textarea',reflections[1]);submit();
+ input('textarea','빈티지, 여행');click('[data-investment-kind="experience"]');input('[data-investment-amount]','3년간 옷장 꽉, 여행 7번');
+ submit();await settle();assert.ok(d.querySelector('.ai-report'));assert.ok(d.querySelector('.report-assets').textContent.includes('여행 7번'));
+});

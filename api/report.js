@@ -1,5 +1,5 @@
 import { classify } from '../classification.js';
-import { REFLECTION_QUESTIONS, REPORT_SCHEMA, validateReflections, validateReport, normalizeInvestment, INVESTMENT_KINDS } from '../report-contract.js';
+import { REFLECTION_QUESTIONS, groundedReportSchema, evidenceCatalog, validateReflections, validateReport, normalizeInvestment, INVESTMENT_KINDS } from '../report-contract.js';
 
 export const config = {maxDuration:60};
 const SYSTEM_PROMPT = `당신은 SUMUP의 한국어 자기 탐색 리포트 작성자입니다.
@@ -41,7 +41,7 @@ reason은 연결한 답변의 소재들이 그 성향과 만나 왜 이 프로�
 evidence에는 연결한 서로 다른 답변의 근거를 2~3개 담으세요. source는 원래 질문 번호(0,1,2)입니다. 건너뛴 답변은 근거로 쓰지 마세요. 답변이 두 개뿐이면 두 답변을 모두 사용하되 프로젝트의 형식과 가치를 다르게 구성하세요.
 contribution은 프로젝트의 구체적인 콘텐츠나 운영 장면에서 사용자 강점이 읽는 사람·보는 사람·참여자에게 어떤 가치를 줄 수 있는지 설명합니다. 할 일 지시가 아닙니다.
 feasibility는 사용자에게 이미 있는 관심·경험·소재가 왜 이 작은 프로젝트로 자연스럽게 이어질 수 있는지 설명합니다. 새로 배워야 할 목록이나 일정은 쓰지 마세요. 정보가 부족하면 프로젝트 규모를 작게 잡고 필요한 가정을 분명히 하세요.
-모든 quote는 해당 답변에서 핵심 구절 하나만 60자 이내로 연속 발췌하세요. 답변 전체를 길게 복사하지 말고 10~30자 정도를 우선하세요. 원문을 수정하거나 말줄임표를 붙이지 마세요.
+모든 quote는 입력의 evidenceCatalog에서 고른 정확한 source·quote 조합만 사용하세요. 3번째 이야기의 별도 기간·횟수·금액 입력도 source 2의 실제 근거에 포함됩니다. 짧은 답변은 10자 미만이어도 그대로 인용하세요. 답변 전체를 길게 복사하지 말고 10~30자 정도를 우선하세요. 원문을 수정하거나 말줄임표를 붙이지 마세요.
 outlook의 scene에는 지금의 강점이 나만의 계정·콘텐츠·프로젝트로 드러나는 현실적인 장면을, value에는 그 장면에서 사용자가 줄 수 있는 가치를 적으세요. 계획·과제·성공 예측은 쓰지 마세요.
 정해진 JSON 형식으로만 답하세요. 모든 문장은 한국어로 쓰고, 제목과 키워드는 짧게, 설명은 항목당 1~3문장으로 쓰세요.`;
 
@@ -90,26 +90,36 @@ export function createReportHandler({request=globalThis.fetch,environment=()=>pr
       const entry=attempts.get(ip) || {count:0,until:timestamp+15*60*1000};
       if(entry.count>=5){res.setHeader('Retry-After',String(Math.ceil((entry.until-timestamp)/1000)));throw new HttpError(429,'RATE_LIMITED','요청이 많아요. 잠시 쉬었다가 다시 시도해주세요.');}
       entry.count++;attempts.set(ip,entry);
-      const response=await request('https://api.openai.com/v1/responses',{
-        method:'POST',headers:{'Authorization':`Bearer ${key}`,'Content-Type':'application/json'},signal:AbortSignal.timeout(45000),
-        body:JSON.stringify({model:env.OPENAI_MODEL || 'gpt-4.1-mini',store:false,max_output_tokens:5000,
-          input:[{role:'system',content:SYSTEM_PROMPT},{role:'user',content:JSON.stringify({
-            tendencies:{primaryId:profile.primary,secondaryId:profile.secondary,primary:profile.title,secondary:profile.secondaryLabel,answerInterpretations:profile.evidence},
-            reflections:reflections.map((answer,i)=>({source:i,question:REFLECTION_QUESTIONS[i].title,answer})).filter(item=>item.answer),
-            investment:{kind:investment.kind,kindLabel:INVESTMENT_KINDS[investment.kind]||null,amount:investment.amount}
-          })}],text:{format:{type:'json_schema',name:'sumup_report',strict:true,schema:REPORT_SCHEMA}}})
-      });
-      if(!response.ok){
-        if(response.status===429)throw new HttpError(503,'AI_BUSY','AI 요청이 몰리고 있어요. 잠시 후 다시 시도해주세요.');
-        if(response.status===401||response.status===403)throw new HttpError(503,'AI_AUTH_ERROR','AI 연결 설정을 확인하고 있어요. 잠시 후 다시 시도해주세요.');
-        throw new HttpError(502,'AI_UPSTREAM_ERROR','리포트를 생성하지 못했어요. 답변은 유지되니 다시 시도해주세요.');
-      }
-      const data=await response.json();
-      if(data.status!=='completed')throw new HttpError(502,'AI_INCOMPLETE','리포트가 완성되지 않았어요. 다시 시도해주세요.');
-      const output=(data.output||[]).flatMap(item=>item.content||[]).filter(item=>item.type==='output_text').map(item=>item.text).join('');
+      const allowedTraits=[profile.primary,profile.secondary];
+      const schema=groundedReportSchema(reflections,investment,allowedTraits);
+      const input=[{role:'system',content:SYSTEM_PROMPT},{role:'user',content:JSON.stringify({
+        tendencies:{primaryId:profile.primary,secondaryId:profile.secondary,primary:profile.title,secondary:profile.secondaryLabel,answerInterpretations:profile.evidence},
+        reflections:reflections.map((answer,i)=>({source:i,question:REFLECTION_QUESTIONS[i].title,answer})).filter(item=>item.answer),
+        investment:{kind:investment.kind,kindLabel:INVESTMENT_KINDS[investment.kind]||null,amount:investment.amount},
+        evidenceCatalog:evidenceCatalog(reflections,investment)
+      })}];
+      // At most one repair, within the same overall 45-second generation budget.
+      const signal=AbortSignal.timeout(45000);
       let report;
-      try{report=JSON.parse(output);}catch{throw new HttpError(502,'AI_INVALID_REPORT','리포트 형식을 확인하지 못했어요. 다시 시도해주세요.');}
-      if(!validateReport(report,reflections,[profile.primary,profile.secondary]))throw new HttpError(502,'AI_INVALID_REPORT','답변 근거를 확인하지 못했어요. 다시 시도해주세요.');
+      for(let attempt=0;attempt<2;attempt++){
+        const response=await request('https://api.openai.com/v1/responses',{
+          method:'POST',headers:{'Authorization':`Bearer ${key}`,'Content-Type':'application/json'},signal,
+          body:JSON.stringify({model:env.OPENAI_MODEL || 'gpt-4.1-mini',store:false,max_output_tokens:5000,input,
+            text:{format:{type:'json_schema',name:'sumup_report',strict:true,schema}}})
+        });
+        if(!response.ok){
+          if(response.status===429)throw new HttpError(503,'AI_BUSY','AI 요청이 몰리고 있어요. 잠시 후 다시 시도해주세요.');
+          if(response.status===401||response.status===403)throw new HttpError(503,'AI_AUTH_ERROR','AI 연결 설정을 확인하고 있어요. 잠시 후 다시 시도해주세요.');
+          throw new HttpError(502,'AI_UPSTREAM_ERROR','리포트를 생성하지 못했어요. 답변은 유지되니 다시 시도해주세요.');
+        }
+        const data=await response.json();
+        if(data.status!=='completed')throw new HttpError(502,'AI_INCOMPLETE','리포트가 완성되지 않았어요. 다시 시도해주세요.');
+        const output=(data.output||[]).flatMap(item=>item.content||[]).filter(item=>item.type==='output_text').map(item=>item.text).join('');
+        try{report=JSON.parse(output);}catch{throw new HttpError(502,'AI_INVALID_REPORT','리포트 형식을 확인하지 못했어요. 다시 시도해주세요.');}
+        if(validateReport(report,reflections,allowedTraits,investment))break;
+        if(attempt===1)throw new HttpError(502,'AI_INVALID_REPORT','AI가 답변과 맞지 않는 근거를 작성했어요. 입력은 그대로 남아 있으니 다시 시도해주세요.');
+        input.push({role:'assistant',content:output},{role:'user',content:'이 리포트는 근거 검사를 통과하지 못했습니다. evidenceCatalog의 정확한 source와 quote 조합만 쓰고, 제안마다 서로 다른 질문 번호를 최소 두 개 선택하세요. trait은 제공한 primaryId 또는 secondaryId만 사용하세요. 모든 필수 항목과 길이 제한을 확인해 리포트 전체를 한 번 수정해주세요. 입력에 없는 근거를 만들거나 임의로 추가하지 마세요.'});
+      }
       return send(res,200,{report});
     }catch(error){
       if(error instanceof HttpError)return send(res,error.status,{error:error.message,code:error.code});
