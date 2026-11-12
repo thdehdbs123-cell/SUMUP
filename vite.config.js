@@ -12,5 +12,5 @@ export default defineConfig(({mode}) => {
     if(req.url?.split('?')[0]==='/api/report')return handler(req,res);
     next();
   };
-  return {plugins:[{name:'sumup-report-api',configureServer(server){server.middlewares.use(middleware)},configurePreviewServer(server){server.middlewares.use(middleware)}}]};
+  return {build:{rollupOptions:{input:{main:'index.html',node:'node/index.html'}}},plugins:[{name:'sumup-report-api',configureServer(server){server.middlewares.use(middleware)},configurePreviewServer(server){server.middlewares.use(middleware)}}]};
 });
