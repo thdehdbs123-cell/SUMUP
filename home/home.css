@@ -173,3 +173,17 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--violet);outline-off
 .hm.typing.vk:not(.fakekb) .nav{opacity:0}
 .chips{transition:opacity .4s,bottom .35s cubic-bezier(.2,.8,.2,1)}
 .hello{transition:opacity .35s,transform .35s}
+
+/* ───── 대화 중 음성: 가운데 오브 대신 입력창 마이크만 반짝임 ───── */
+.hm.chat.listen .vorb,.hm.chat.listen .vwave{opacity:0;transform:scale(.85);pointer-events:none}
+.hm.chat.listen .ask .mic::before{display:none}
+.hm.chat.listen .ask .mic{outline:none}
+.hm.chat.listen .ask .mic::after{content:'';position:absolute;inset:-5px;border-radius:50%;padding:2.5px;
+  background:conic-gradient(from var(--a,0deg),#52d9fa,#c7fe0c,#8fe3ff,#ddff70,#52d9fa);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);
+  filter:drop-shadow(0 0 6px rgba(120,230,220,.8));animation:micSpin 2.4s linear infinite,micGlow 1.6s ease-in-out infinite alternate}
+.hm.chat.listen .ask .mic img{animation:micTwinkle 1.6s ease-in-out infinite alternate}
+@property --a{syntax:'<angle>';inherits:false;initial-value:0deg}
+@keyframes micSpin{to{--a:360deg}}
+@keyframes micGlow{from{opacity:.65}to{opacity:1}}
+@keyframes micTwinkle{from{filter:brightness(1)}to{filter:brightness(1.25) drop-shadow(0 0 6px rgba(150,240,230,.9))}}
