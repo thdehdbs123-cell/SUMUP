@@ -2,8 +2,8 @@ import './home.css';
 import { HOME_ASSETS as A } from './assets.js';
 
 const NAME = (new URLSearchParams(location.search).get('name') || '').trim().slice(0, 20) || '수아';
-const CHIPS_1 = ['빈티지샵 공간 무드보드 제작', '새로 시청한 유튜브 분석', '다이빙 장비 리뷰 정리', '이번 주 기록 돌아보기'];
-const CHIPS_2 = ['최근 저장한 사진 분석', '내게 맞는 컨텐츠 추천', '새로 시청한 영상 요약', '여행 사진으로 가능성 찾기'];
+const CHIPS_1 = ['빈티지샵 공간 무드보드 제작', '주말 다이빙 포인트 찾기', '필름 카메라 입문 가이드', '이번 주 기록 돌아보기', '중고 장비 시세 알아보기'];
+const CHIPS_2 = ['최근 저장한 사진 분석', '여행 브이로그 아이디어', '좋아하는 카페 지도 만들기', '새로 시청한 유튜브 분석', '내게 맞는 컨텐츠 추천'];
 const NOTI = [
   ['✨', '#f6ffd6', '새로운 관심사를 발견했어요!', '최근 기록에서 ‘공간 큐레이션’에 대한 관심을 찾았어요', '../node/'],
   ['🎯', '#eae2fd', '오늘의 작은 미션', '리뷰할 다이빙 포인트 조사하기', '../node/'],
@@ -81,14 +81,14 @@ function setListening(on) {
     let lvl = 0, target = 0;
     clearInterval(setListening.level);
     setListening.level = setInterval(() => {
-      if (Math.random() < .35) target = Math.random() < .2 ? .08 : .3 + Math.random() * .7;
-      lvl += (target - lvl) * .45;
+      if (Math.random() < .18) target = .25 + Math.random() * .5;
+      lvl += (target - lvl) * .12;
       hm.style.setProperty('--lvl', lvl.toFixed(3));
     }, 90);
     input.value = ''; input.placeholder = '말하는 내용을 받아 적고 있어요';
     let i = 0;
     clearInterval(setListening.timer);
-    setListening.timer = setInterval(() => { i += 2; input.value = HEARD.slice(0, i); if (i >= HEARD.length) clearInterval(setListening.timer); }, 90);
+    setListening.timer = setInterval(() => { i += 2; input.value = HEARD.slice(0, i); if (i >= HEARD.length) clearInterval(setListening.timer); }, 120);
   } else {
     clearInterval(setListening.timer);
     clearInterval(setListening.level);
@@ -142,6 +142,10 @@ function closeNoti() { noti.classList.remove('on'); $('[data-bell]').setAttribut
 input.addEventListener('input', syncButton);
 // 입력 중: 화면을 어둡게 하고 칩·입력창을 키보드 위로 올림 (마우스 환경에서는 가짜 키보드를 보여 줌)
 const fakeKeyboard = window.matchMedia?.('(pointer: fine)').matches;
+// 휴대폰 실제 키보드가 올라오면 그 높이만큼 입력창을 올려 가려지지 않게 함
+const vv = window.visualViewport;
+const syncVK = () => { if (!vv) return; const h = Math.max(0, window.innerHeight - vv.height - vv.offsetTop); hm.style.setProperty('--vk', `${Math.round(h)}px`); hm.classList.toggle('vk', h > 80); };
+vv?.addEventListener('resize', syncVK); vv?.addEventListener('scroll', syncVK);
 let blurTimer = 0;
 input.addEventListener('focus', () => { clearTimeout(blurTimer); if (listening) return; hm.classList.add('typing'); hm.classList.toggle('fakekb', !!fakeKeyboard); });
 input.addEventListener('blur', () => { blurTimer = setTimeout(() => hm.classList.remove('typing', 'fakekb'), 120); });
