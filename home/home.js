@@ -1,8 +1,7 @@
-import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css';
 import './home.css';
 import { HOME_ASSETS as A } from './assets.js';
 
-const NAME = '수아';
+const NAME = (new URLSearchParams(location.search).get('name') || '').trim().slice(0, 20) || '수아';
 const CHIPS_1 = ['빈티지샵 공간 무드보드 제작', '새로 시청한 유튜브 분석', '다이빙 장비 리뷰 정리', '이번 주 기록 돌아보기'];
 const CHIPS_2 = ['최근 저장한 사진 분석', '내게 맞는 컨텐츠 추천', '새로 시청한 영상 요약', '여행 사진으로 가능성 찾기'];
 const NOTI = [

@@ -46,3 +46,17 @@ test('홈: 알림 3개 열기',t=>{
  assert.ok(d.querySelector('.noti').classList.contains('on'));
  assert.equal(d.querySelectorAll('.noti a').length,3);
 });
+
+test('사전링크 결과 → 어플 시작 → 소개 4장 → 메인홈 (이름 전달)',t=>{
+ const intro=readFileSync(new URL('../app/intro.js',import.meta.url),'utf8').replace(/^import .*;$/gm,'');
+ const dom=new JSDOM('<div id="intro-app"></div>',{url:'http://localhost:5174/app/?name=%EB%8F%84%EC%9C%A4',runScripts:'outside-only',pretendToBeVisual:true});
+ t.after(()=>dom.window.close());const w=dom.window,d=w.document;
+ w.H={blobBlue:'',blobGreen:'',blobLight:''};w.N={orb:'',content:{레포트:'',계획표:'',예산안:''}};w.matchMedia=()=>({matches:true});
+ w.eval(intro);
+ assert.match(d.querySelector('.hey').textContent,/도윤님/);
+ assert.equal(d.querySelectorAll('.slide').length,4);
+ assert.equal(d.querySelector('[data-next]').getAttribute('href'),'../home/?name=%EB%8F%84%EC%9C%A4');
+ assert.equal(d.querySelector('.skip').getAttribute('href'),'../home/?name=%EB%8F%84%EC%9C%A4');
+ const src=readFileSync(new URL('../src.js',import.meta.url),'utf8');
+ assert.match(src,/href="app\/\?name=/);
+});
