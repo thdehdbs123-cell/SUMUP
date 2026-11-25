@@ -42,6 +42,14 @@ app.innerHTML = `<main class="hm" aria-label="홈">
     <input name="q" placeholder="오늘 떠오른 생각을 적어보세요" autocomplete="off" aria-label="오늘 떠오른 생각">
     <button type="button" class="mic" data-mic aria-label="음성으로 말하기" aria-pressed="false"><img src="${A.voice}" alt=""></button>
   </form>
+  <div class="dim" data-dim aria-hidden="true"></div>
+  <section class="voice" aria-label="음성 입력">
+    <button class="vorb" data-stop aria-label="말하기 끝내기"><img src="${A.orb}" alt=""></button>
+    <p class="vcap">듣고 있어요, 무엇을 도와드릴까요?</p>
+    <button class="vwave" data-stop aria-label="말하기 끝내기" style="--bg:url('${A.waveBg}');--w:url('${A.wave}')"><i></i></button>
+  </section>
+  <nav class="fnav" aria-label="하단 메뉴(음성 모드)"><a href="#" data-nav="discover" class="" aria-label="발견"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21v-7m0 0L5 7m7 7 7-7M5 7V3.5M5 7H1.5m17.5 0V3.5M19 7h3.5"/></svg></a><a href="../node/" data-nav="node" class="" aria-label="노드"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 7.5v9L12 21l8-4.5v-9L12 3Z"/><path d="m4 7.5 8 4.5 8-4.5M12 12v9"/></svg></a><a href="#" data-nav="home" class="on" aria-label="홈"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 10 12 3l8.5 7v10.5h-17V10Z"/><path d="M7.5 20.5c1.5-3 3-4.5 4.5-4.5s3 1.5 4.5 4.5M12 16v-4"/></svg></a><a href="#" data-nav="talk" class="" aria-label="프리토킹"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.5c-1-1.1-8.5-6.2-8.5-11a4.6 4.6 0 0 1 8.5-2.4 4.6 4.6 0 0 1 8.5 2.4c0 4.8-7.5 9.9-8.5 11Z"/></svg></a><a href="#" data-nav="my" aria-label="My"><span class="av"></span></a></nav>
+  <img class="kb" src="${A.keyboard}" alt="" aria-hidden="true">
   <nav class="nav" aria-label="하단 메뉴">${NAV.map(([k, t, href]) => `<a href="${href || '#'}" ${k === 'home' ? 'aria-current="page"' : ''} data-nav="${k}" aria-label="${t}"><img src="${A.nav[k]}" alt=""></a>`).join('')}</nav>
   <div class="toast" role="status"></div>
 </main>`;
@@ -71,17 +79,14 @@ function setListening(on) {
   mic?.setAttribute('aria-pressed', String(on));
   mic?.setAttribute('aria-label', on ? '말하기 끝내기' : '음성으로 말하기');
   if (on) {
-    hello.innerHTML = '<h1>듣고 있어요…</h1><p>편하게 말해 보세요</p>';
     input.value = ''; input.placeholder = '말하는 내용을 받아 적고 있어요';
     let i = 0;
     clearInterval(setListening.timer);
     setListening.timer = setInterval(() => { i += 2; input.value = HEARD.slice(0, i); if (i >= HEARD.length) clearInterval(setListening.timer); }, 90);
   } else {
     clearInterval(setListening.timer);
-    hello.innerHTML = `<h1>${NAME}님 안녕하세요!</h1><p>오늘은 어떤 가능성을 만들어 볼까요?</p>`;
     input.placeholder = '오늘 떠오른 생각을 적어보세요';
     syncButton();
-    input.focus();
   }
 }
 
@@ -104,12 +109,18 @@ function send(text) {
 
 app.addEventListener('click', event => {
   const t = event.target.closest('button,a');
-  if (!t) { if (!event.target.closest('.noti')) closeNoti(); return; }
+  if (!t) {
+    if (event.target.closest('[data-dim]')) { if (listening) setListening(false); input.blur(); }
+    if (!event.target.closest('.noti')) closeNoti();
+    return;
+  }
   const d = t.dataset;
   if (d.bell !== undefined) { const on = !noti.classList.contains('on'); noti.classList.toggle('on', on); t.setAttribute('aria-expanded', String(on)); return; }
   closeNoti();
   if (d.chip) { input.value = d.chip; syncButton(); input.focus(); return; }
-  if (d.mic !== undefined) { event.preventDefault(); return setListening(!listening); }
+  if (d.send !== undefined) hm.classList.remove('typing', 'fakekb');
+  if (d.mic !== undefined) { event.preventDefault(); input.blur(); return setListening(!listening); }
+  if (d.stop !== undefined) return setListening(false);
   if (d.plus !== undefined) return toast('사진·링크를 불러와 기록할 수 있어요');
   if (d.me !== undefined) return toast('My 페이지는 준비 중이에요');
   if (d.nav && t.getAttribute('href') === '#') {
@@ -121,6 +132,13 @@ app.addEventListener('click', event => {
 function closeNoti() { noti.classList.remove('on'); $('[data-bell]').setAttribute('aria-expanded', 'false'); }
 
 input.addEventListener('input', syncButton);
+// 입력 중: 화면을 어둡게 하고 칩·입력창을 키보드 위로 올림 (마우스 환경에서는 가짜 키보드를 보여 줌)
+const fakeKeyboard = window.matchMedia?.('(pointer: fine)').matches;
+let blurTimer = 0;
+input.addEventListener('focus', () => { clearTimeout(blurTimer); if (listening) return; hm.classList.add('typing'); hm.classList.toggle('fakekb', !!fakeKeyboard); });
+input.addEventListener('blur', () => { blurTimer = setTimeout(() => hm.classList.remove('typing', 'fakekb'), 120); });
+app.addEventListener('pointerdown', event => { if (event.target.closest('.chip,.ask,.kb')) clearTimeout(blurTimer); });
+app.querySelector('.kb').addEventListener('pointerdown', event => event.preventDefault());
 ask.addEventListener('submit', event => {
   event.preventDefault();
   if (listening) setListening(false);

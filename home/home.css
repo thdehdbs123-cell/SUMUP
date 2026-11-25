@@ -102,10 +102,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--violet);outline-off
 .ask .mic,.ask .send{position:relative;width:37px;height:37px;display:grid;place-items:center;border-radius:50%}
 .ask .mic img{width:37px;height:37px}
 .ask .send{background:var(--key);color:#fff}
-.hm.listen .ask .mic::before{content:'';position:absolute;inset:-6px;border-radius:50%;border:2px solid rgba(199,254,12,.9);animation:pulse 1.4s ease-out infinite}
 @keyframes pulse{from{transform:scale(.8);opacity:1}to{transform:scale(1.5);opacity:0}}
-.hm.listen .hello h1{animation:breath 2.4s ease-in-out infinite}
-@keyframes breath{50%{opacity:.55}}
 
 /* ───── 하단 탭 ───── */
 .nav{position:absolute;left:0;right:0;bottom:0;height:97px;z-index:4;display:flex;justify-content:space-around;padding:20px 14px 0;
@@ -116,3 +113,46 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--violet);outline-off
 .toast.on{opacity:1;transform:translate(-50%,0)}
 @media (min-width:431px){.hm{box-shadow:0 0 0 1px rgba(0,0,0,.04),0 20px 60px rgba(0,0,0,.08)}}
 @media (prefers-reduced-motion:reduce){.blob,.blob img,.sheen,.swoosh,.track{animation:none!important}}
+
+/* ───── 어두운 덮개 (음성·입력 중) ───── */
+.dim{position:absolute;inset:0;z-index:5;background:rgba(38,40,42,.46);opacity:0;pointer-events:none;transition:opacity .35s ease}
+.hm.listen .dim,.hm.typing .dim{opacity:1;pointer-events:auto}
+
+/* ───── 음성 입력: 오브 + 안내 + 파형 + 떠 있는 하단 탭 ───── */
+.voice{position:absolute;inset:0;z-index:6;pointer-events:none}
+.hm.listen .voice{pointer-events:auto}
+.vorb{position:absolute;left:50%;bottom:252px;width:142px;height:142px;margin-left:-71px;opacity:0;transform:scale(.6);transition:opacity .4s,transform .55s cubic-bezier(.2,1.4,.4,1)}
+.vorb img{width:100%;height:100%;display:block;animation:orb 3.2s ease-in-out infinite}
+.hm.listen .vorb{opacity:1;transform:none}
+@keyframes orb{0%,100%{transform:translateY(0) scale(1);filter:drop-shadow(0 0 0 rgba(120,230,220,0))}50%{transform:translateY(-6px) scale(1.04);filter:drop-shadow(0 6px 22px rgba(120,230,220,.55))}}
+.vcap{position:absolute;left:0;right:0;bottom:190px;text-align:center;color:#fff;font-size:20px;font-weight:600;letter-spacing:-.6px;opacity:0;transform:translateY(8px);transition:opacity .4s .12s,transform .4s .12s}
+.hm.listen .vcap{opacity:1;transform:none}
+.vwave{position:absolute;left:50%;bottom:124px;width:192px;height:40px;margin-left:-96px;border-radius:20px;background:var(--bg) center/100% 100%;overflow:hidden;opacity:0;transform:translateY(10px);transition:opacity .4s .2s,transform .4s .2s}
+.hm.listen .vwave{opacity:1;transform:none}
+.vwave i{position:absolute;inset:5px 14px;background:var(--w) 0 50%/146px 30px repeat-x;animation:wave 2.4s linear infinite,amp .9s ease-in-out infinite alternate;
+  -webkit-mask:linear-gradient(90deg,transparent,#000 18%,#000 82%,transparent);mask:linear-gradient(90deg,transparent,#000 18%,#000 82%,transparent)}
+@keyframes wave{to{background-position:-146px 50%}}
+@keyframes amp{from{transform:scaleY(.7)}to{transform:scaleY(1.15)}}
+.fnav{position:absolute;left:17px;right:17px;bottom:39px;height:68px;border-radius:34px;z-index:6;display:flex;align-items:center;justify-content:space-around;padding:0 18px;
+  background:rgba(255,255,255,.94);box-shadow:0 8px 28px -10px rgba(0,0,0,.35);opacity:0;transform:translateY(16px);pointer-events:none;transition:opacity .35s,transform .45s cubic-bezier(.2,.8,.2,1)}
+.hm.listen .fnav{opacity:1;transform:none;pointer-events:auto}
+.fnav a{width:44px;height:44px;display:grid;place-items:center;color:var(--k90)}
+.fnav svg{width:27px;height:27px}
+.fnav a.on{width:60px;height:56px;border-radius:28px;color:#fff;background:radial-gradient(60% 80% at 50% 120%,rgba(120,220,220,.55),transparent 70%),var(--key);box-shadow:0 0 0 2px rgba(255,255,255,.9),0 0 0 3px rgba(130,220,220,.45)}
+.fnav .av{width:30px;height:30px;border-radius:50%;background:#8a8a8a}
+.hm.listen .nav,.hm.listen .ask{opacity:0;pointer-events:none}
+.nav,.ask{transition:opacity .3s,bottom .35s cubic-bezier(.2,.8,.2,1)}
+
+/* ───── 입력 중: 칩·입력창이 키보드 위로 ───── */
+.hm.typing .chips,.hm.typing .ask{z-index:7}
+.hm.typing:not(.chat) .chips{opacity:1;pointer-events:auto}
+.kb{position:absolute;left:0;bottom:0;width:100%;height:auto;z-index:7;transform:translateY(102%);transition:transform .38s cubic-bezier(.2,.8,.2,1);user-select:none}
+.hm.fakekb .kb{transform:none}
+.hm.fakekb .ask{bottom:357px}
+.hm.fakekb .chips{bottom:437px}
+.chips{transition:opacity .4s,bottom .35s cubic-bezier(.2,.8,.2,1)}
+
+.hm.listen .hello,.hm.typing .hello{z-index:6}
+.hm.typing .chip{background:rgba(236,240,242,.96);color:var(--k90)}
+.hm.typing .chip:hover{background:#fff}
+.hm.listen .hello h1,.hm.typing .hello h1{color:#111}.hm.listen .hello p,.hm.typing .hello p{color:#1c1d1f}
