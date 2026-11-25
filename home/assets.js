@@ -6,6 +6,7 @@ export const HOME_ASSETS = {
   blobGreen: url('blob-green.webp'),
   blobLight: url('blob-light.webp'),
   orb: url('orb.webp'),
+  orbAnim: url('orb-anim.webp'),
   wave: url('wave.webp'),
   waveBg: url('wave-bg.webp'),
   keyboard: url('keyboard.webp'),
