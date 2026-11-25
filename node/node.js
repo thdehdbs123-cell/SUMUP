@@ -339,7 +339,8 @@ root.addEventListener('click', event => {
   if (d.open) { state.view = 'canvas'; state.mode = 'idle'; state.cam = { x: 0, y: 0 }; return render(); }
   if (d.activate !== undefined) { state.activated = !state.activated; render(); return toast(state.activated ? '가능성 카드 02를 활성화했어요' : '활성화를 취소했어요'); }
   if (d.newcanvas !== undefined) return toast('새 가능성 카드는 발견 탭에서 고를 수 있어요');
-  if (d.tab) return d.tab === 'node' ? null : toast('프로토타입에서는 노드 탭이 연결돼 있어요');
+  if (d.tab === 'home') { location.href = '../home/'; return; }
+  if (d.tab) return d.tab === 'node' ? null : toast('프로토타입에서는 홈 · 노드 탭이 연결돼 있어요');
   if (d.back !== undefined) {
     if (state.view === 'next') { state.view = 'canvas'; state.mode = 'idle'; state.nextType = null; return render(); }
     if (state.mode !== 'idle' && state.mode !== 'suggest') { state.mode = 'idle'; state.sel = null; return render(); }
