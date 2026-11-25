@@ -17,28 +17,30 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--violet);outline-off
 .bg{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden}
 .blob{position:absolute;will-change:transform}
 .blob img{display:block;width:100%;height:100%;will-change:filter}
-.blob.blue{left:-6%;top:31%;width:107%;height:76%;animation:driftA 19s ease-in-out infinite alternate}
-.blob.blue img{filter:blur(42px) saturate(1.05);opacity:.85;animation:shimmerA 11s ease-in-out infinite alternate}
-.blob.green{left:-2%;top:59%;width:104%;height:58%;animation:driftB 23s ease-in-out infinite alternate}
-.blob.green img{filter:blur(36px);opacity:.78;animation:shimmerB 13s ease-in-out infinite alternate}
-.blob.light{left:12%;top:72%;width:100%;height:36%;animation:driftC 17s ease-in-out infinite alternate}
+.blob.blue{left:-6%;top:31%;width:107%;height:76%;animation:driftA 12s cubic-bezier(.45,.05,.55,.95) infinite}
+.blob.blue img{filter:blur(42px) saturate(1.05);opacity:.85;animation:shimmerA 7s ease-in-out infinite alternate,morphA 8.5s cubic-bezier(.45,.05,.55,.95) infinite}
+.blob.green{left:-2%;top:59%;width:104%;height:58%;animation:driftB 14s cubic-bezier(.45,.05,.55,.95) infinite}
+.blob.green img{filter:blur(36px);opacity:.78;animation:shimmerB 8s ease-in-out infinite alternate,morphB 10s cubic-bezier(.45,.05,.55,.95) infinite}
+.blob.light{left:12%;top:72%;width:100%;height:36%;animation:driftC 10s cubic-bezier(.45,.05,.55,.95) infinite}
 .blob.light img{filter:blur(22px);opacity:.95}
 .sheen{position:absolute;left:-30%;top:30%;width:160%;height:90%;border-radius:50%;mix-blend-mode:soft-light;opacity:.55;
   background:conic-gradient(from 0deg,rgba(255,255,255,0),rgba(190,255,250,.9),rgba(255,255,255,0) 25%,rgba(230,255,140,.85) 45%,rgba(255,255,255,0) 60%,rgba(170,200,255,.8) 80%,rgba(255,255,255,0));
-  filter:blur(30px);animation:spin 38s linear infinite}
-.swoosh{position:absolute;left:-14.4%;top:83.9%;width:89.6%;height:auto;opacity:.9;animation:swoosh 26s ease-in-out infinite alternate}
+  filter:blur(30px);animation:spin 22s linear infinite}
+.swoosh{position:absolute;left:-14.4%;top:83.9%;width:89.6%;height:auto;opacity:.9;animation:swoosh 13s cubic-bezier(.45,.05,.55,.95) infinite}
 .fade{position:absolute;inset:0;background:linear-gradient(180deg,#fff 0%,#fff 36%,rgba(255,255,255,.55) 47%,rgba(255,255,255,0) 60%)}
-@keyframes driftA{0%{transform:translate3d(0,0,0) scale(1) rotate(0)}50%{transform:translate3d(5%,-3%,0) scale(1.06) rotate(4deg)}100%{transform:translate3d(-4%,2%,0) scale(.97) rotate(-3deg)}}
-@keyframes driftB{0%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(-6%,-4%,0) scale(1.08) rotate(-4deg)}100%{transform:translate3d(4%,1%,0) scale(1.02) rotate(3deg)}}
-@keyframes driftC{0%{transform:translate3d(0,0,0) scale(1)}100%{transform:translate3d(-10%,-5%,0) scale(1.1) rotate(6deg)}}
+@keyframes driftA{0%,100%{transform:translate3d(0,0,0) scale(1) rotate(0)}25%{transform:translate3d(8%,-5%,0) scale(1.1) rotate(6deg)}50%{transform:translate3d(2%,4%,0) scale(.95) rotate(-2deg)}75%{transform:translate3d(-8%,-2%,0) scale(1.07) rotate(-7deg)}}
+@keyframes driftB{0%,100%{transform:translate3d(0,0,0) scale(1) rotate(0)}30%{transform:translate3d(-9%,-6%,0) scale(1.12) rotate(-6deg)}60%{transform:translate3d(6%,-2%,0) scale(1.03) rotate(5deg)}80%{transform:translate3d(3%,4%,0) scale(.96) rotate(1deg)}}
+@keyframes driftC{0%,100%{transform:translate3d(0,0,0) scale(1) rotate(0)}35%{transform:translate3d(-14%,-8%,0) scale(1.16) rotate(8deg)}70%{transform:translate3d(-4%,3%,0) scale(1.04) rotate(-4deg)}}
+@keyframes morphA{0%,100%{transform:scale(1,1)}33%{transform:scale(1.08,.94)}66%{transform:scale(.94,1.07)}}
+@keyframes morphB{0%,100%{transform:scale(1,1) skewX(0)}40%{transform:scale(.93,1.08) skewX(3deg)}75%{transform:scale(1.07,.95) skewX(-2deg)}}
 @keyframes shimmerA{0%{filter:blur(42px) saturate(1) hue-rotate(0deg)}100%{filter:blur(46px) saturate(1.25) hue-rotate(-14deg)}}
 @keyframes shimmerB{0%{filter:blur(36px) hue-rotate(0deg) brightness(1)}100%{filter:blur(40px) hue-rotate(12deg) brightness(1.06)}}
 @keyframes spin{to{transform:rotate(360deg)}}
-@keyframes swoosh{0%{transform:translate3d(0,0,0) rotate(0)}100%{transform:translate3d(8%,-6%,0) rotate(-4deg)}}
+@keyframes swoosh{0%,100%{transform:translate3d(0,0,0) rotate(0)}40%{transform:translate3d(12%,-8%,0) rotate(-6deg)}70%{transform:translate3d(4%,-2%,0) rotate(2deg)}}
 /* 음성 듣는 중: 배경이 더 빠르고 밝게 숨쉼 */
-.hm.listen .blob.blue{animation-duration:6s}
-.hm.listen .blob.green{animation-duration:7s}
-.hm.listen .blob.light{animation-duration:5s}
+.hm.listen .blob.blue{animation-duration:5s}
+.hm.listen .blob.green{animation-duration:6s}
+.hm.listen .blob.light{animation-duration:4s}
 .hm.listen .blob img{opacity:1}
 .hm.listen .sheen{animation-duration:12s;opacity:.8}
 .hm.listen .fade{opacity:.75;transition:opacity .6s}
