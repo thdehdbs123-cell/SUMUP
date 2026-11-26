@@ -113,6 +113,7 @@ function send(text) {
   const wait = addMsg('bot', '<span class="dots" aria-label="답변 작성 중"><i></i><i></i><i></i></span>');
   setTimeout(() => {
     wait.innerHTML = `좋아요! ‘${esc(text.length > 18 ? text.slice(0, 18) + '…' : text)}’에서 이어질 가능성을 찾아볼게요.<br>관련된 기록 3개를 노드로 정리해 두었어요.<br><a class="go" href="../node/">노드로 이어가기 →</a>`;
+    talk.scrollTop = talk.scrollHeight;
   }, 1300);
 }
 

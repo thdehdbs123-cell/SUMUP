@@ -82,7 +82,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--violet);outline-off
 .hm.chat .chips,.hm.listen .chips{opacity:0;pointer-events:none}
 
 /* ───── 대화 ───── */
-.talk{position:absolute;left:16px;right:16px;top:130px;bottom:236px;z-index:2;display:flex;flex-direction:column;justify-content:flex-end;gap:12px;overflow-y:auto;padding:10px 0}
+.talk{position:absolute;left:16px;right:16px;top:130px;bottom:236px;z-index:2;display:flex;flex-direction:column;justify-content:flex-start;gap:12px;overflow-y:auto;padding:10px 0}
 .msg{max-width:82%;padding:12px 16px;border-radius:20px;font-size:15px;line-height:1.5;animation:rise .4s cubic-bezier(.2,.8,.2,1) both}
 .msg.mine{align-self:flex-end;background:var(--key);color:#fff;border-bottom-right-radius:6px}
 .msg.bot{align-self:flex-start;background:rgba(254,254,254,.86);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 4px 16px -8px rgba(0,0,0,.15);border-bottom-left-radius:6px}
