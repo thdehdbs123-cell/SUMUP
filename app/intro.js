@@ -4,6 +4,9 @@ import { ASSETS as N } from '../node/assets.js';
 
 const params = new URLSearchParams(location.search);
 const NAME = (params.get('name') || '').trim().slice(0, 20);
+// 한글 이름은 성을 빼고 부름 (3자 → 뒤 2자, 4자 → 뒤 2자). 2자 이하·영문 등은 그대로
+const givenName = n => /^[가-힣]{3,4}$/.test(n) ? n.slice(-2) : n;
+const CALL = givenName(NAME);
 const homeHref = `../home/${NAME ? `?name=${encodeURIComponent(NAME)}` : ''}`;
 const esc = v => String(v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
@@ -46,7 +49,7 @@ app.innerHTML = `<main class="intro" aria-label="SUMUP 소개">
     <div class="fade"></div>
   </div>
   <header class="bar"><span class="word">SUMUP</span><a class="skip" href="${homeHref}">건너뛰기</a></header>
-  <p class="hey">${NAME ? `${esc(NAME)}님, 반가워요!` : '반가워요!'}<br><b>SUMUP은 이런 게 가능해요</b></p>
+  <p class="hey">${CALL ? `${esc(CALL)}님, 반가워요!` : '반가워요!'}<br><b>SUMUP은 이런 게 가능해요</b></p>
   <div class="slides" tabindex="0" aria-roledescription="carousel" aria-label="기능 소개">
     ${SLIDES.map((s, i) => `<section class="slide" aria-roledescription="slide" aria-label="${i + 1} / ${SLIDES.length}">
       ${s.art}<span class="tag">${s.tag}</span><h2>${s.title}</h2><p>${s.desc}</p></section>`).join('')}

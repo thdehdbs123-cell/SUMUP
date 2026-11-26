@@ -1,7 +1,10 @@
 import './home.css';
 import { HOME_ASSETS as A } from './assets.js';
 
-const NAME = (new URLSearchParams(location.search).get('name') || '').trim().slice(0, 20) || '수아';
+const esc = v => String(v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+// 한글 이름은 성을 빼고 부름 (3자 → 뒤 2자, 4자 → 뒤 2자). 2자 이하·영문 등은 그대로
+const givenName = n => /^[가-힣]{3,4}$/.test(n) ? n.slice(-2) : n;
+const NAME = esc(givenName((new URLSearchParams(location.search).get('name') || '').trim().slice(0, 20)) || '수아');
 const CHIPS_1 = ['빈티지샵 공간 무드보드 제작', '주말 다이빙 포인트 찾기', '필름 카메라 입문 가이드', '이번 주 기록 돌아보기', '중고 장비 시세 알아보기'];
 const CHIPS_2 = ['최근 저장한 사진 분석', '여행 브이로그 아이디어', '좋아하는 카페 지도 만들기', '새로 시청한 유튜브 분석', '내게 맞는 컨텐츠 추천'];
 const NOTI = [
@@ -12,7 +15,6 @@ const NOTI = [
 const HEARD = '요즘 빈티지 다이빙 장비가 자꾸 눈에 들어와';
 const NAV = [['discover', '발견', null], ['node', '노드', '../node/'], ['home', '홈', null], ['talk', '프리토킹', null], ['my', 'My', null]];
 
-const esc = v => String(v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const chipRow = (list, cls) => {
   const items = list.map(t => `<button class="chip" data-chip="${esc(t)}">${esc(t)}</button>`).join('');
   // 같은 줄을 두 번 이어 붙여 끊김 없이 흐르게 함 (두 번째 묶음은 보조기기에서 숨김)

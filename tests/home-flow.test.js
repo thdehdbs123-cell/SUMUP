@@ -60,3 +60,13 @@ test('사전링크 결과 → 어플 시작 → 소개 4장 → 메인홈 (이�
  const src=readFileSync(new URL('../src.js',import.meta.url),'utf8');
  assert.match(src,/href="app\/\?name=/);
 });
+
+test('greets with the given name only, without the surname',()=>{
+ const src=readFileSync(new URL('../home/home.js',import.meta.url),'utf8');
+ const fn=new Function(src.match(/const givenName = [^\n]+/)[0]+';return givenName')();
+ assert.equal(fn('송도윤'),'도윤');
+ assert.equal(fn('남궁민수'),'민수');
+ assert.equal(fn('도윤'),'도윤');
+ assert.equal(fn('Alex'),'Alex');
+ assert.match(readFileSync(new URL('../app/intro.js',import.meta.url),'utf8'),/esc\(CALL\)\}님, 반가워요!/);
+});
